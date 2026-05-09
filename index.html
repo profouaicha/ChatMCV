@@ -2655,9 +2655,24 @@ async function wcvDownloadAI() {
   const idx = getSelectedModelIndex();
   const model = AI_MODELS[idx];
 
+  // Sauvegarder immédiatement : si iOS recharge la page, on saura reprendre
+  try {
+    sessionStorage.setItem('chatmcv_downloading', model.id);
+  } catch(e) {}
+
   wcvSetState('loading');
   const lbl = document.getElementById('wcv-load-text');
   if (lbl) lbl.textContent = `Connexion à Hugging Face — ${model.label} (${model.size})…`;
+
+  // Sur iOS : fermer la modale immédiatement et afficher la progression dans le panel IA
+  // Cela évite le problème de rechargement de page qui rouvre la modale
+  var isMobileSafari = /iP(hone|ad|od)/.test(navigator.userAgent);
+  if (isMobileSafari) {
+    try { localStorage.setItem('chatmcv_seen', '1'); } catch(e) {}
+    wcvStart();
+    // Ouvrir le panel IA pour montrer la progression
+    if (!aiPanelOpen) toggleAIPanel();
+  }
 
   try {
     const { pipeline, env } = await import(
@@ -2687,6 +2702,11 @@ async function wcvDownloadAI() {
 
     loadingDone = true;
     aiReady = true;
+    // Marquer comme vu immédiatement pour éviter tout rechargement iOS
+    try {
+      localStorage.setItem('chatmcv_seen', '1');
+      sessionStorage.removeItem('chatmcv_downloading');
+    } catch(e) {}
     setAiDot('ready');
     // Mettre à jour le label "prêt" dans le panel avec le nom du modèle
     const readyLabel = document.getElementById('ai-ready-label');
@@ -2748,11 +2768,21 @@ document.addEventListener('DOMContentLoaded', function() {
   } catch(e) {}
 
   var seen = false;
-  try { seen = !!localStorage.getItem('chatmcv_seen'); } catch(e) {}
+  var wasDownloading = false;
+  try {
+    seen = !!localStorage.getItem('chatmcv_seen');
+    wasDownloading = !!sessionStorage.getItem('chatmcv_downloading');
+  } catch(e) {}
 
-  if (seen) {
+  // Si la page a été rechargée par iOS pendant un téléchargement,
+  // ou si l'utilisateur avait déjà vu la modale → on la cache directement
+  if (seen || wasDownloading) {
     var ov = document.getElementById('wcv-overlay');
     if (ov) { ov.classList.add('hidden'); ov.style.display = 'none'; }
+    // Si le modèle était en cache (rechargement iOS), on peut proposer de le recharger via le panel
+    if (wasDownloading) {
+      try { sessionStorage.removeItem('chatmcv_downloading'); } catch(e) {}
+    }
   } else {
     wcvSetState('offer');
   }
