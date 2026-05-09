@@ -2508,6 +2508,7 @@ function handleGeneral(text, norm, history) {
 let aiReady = false;
 let aiPipe  = null;
 let aiPanelOpen = false;
+let wcvDone = false; // Guard iOS : empêche tout retour arrière après "ready"
 
 const AI_MODELS = [
   {
@@ -2641,6 +2642,8 @@ function toggleAIPanel() {
 
 // ── Modale de bienvenue ──
 function wcvSetState(state) { // offer | loading | ready | error
+  if (wcvDone && state !== 'ready') return; // iOS : jamais revenir en arrière
+  if (state === 'ready') wcvDone = true;
   ['offer','loading','ready','error'].forEach(function(s) {
     var el = document.getElementById('wcv-ai-' + s);
     if (el) el.style.display = s === state ? '' : 'none';
@@ -2648,6 +2651,7 @@ function wcvSetState(state) { // offer | loading | ready | error
 }
 
 async function wcvDownloadAI() {
+  wcvDone = false; // Permettre la transition vers loading si on réessaie
   const idx = getSelectedModelIndex();
   const model = AI_MODELS[idx];
 
@@ -2725,22 +2729,30 @@ async function wcvDownloadAI() {
 }
 
 function wcvStart() {
-  localStorage.setItem('chatmcv_seen', '1');
+  try { localStorage.setItem('chatmcv_seen', '1'); } catch(e) {}
   var ov = document.getElementById('wcv-overlay');
   if (!ov) return;
   ov.style.transition = 'opacity 0.25s';
   ov.style.opacity = '0';
-  setTimeout(function() { ov.classList.add('hidden'); }, 260);
+  setTimeout(function() {
+    ov.classList.add('hidden');
+    ov.style.display = 'none'; // iOS Safari fallback
+  }, 260);
 }
 
 document.addEventListener('DOMContentLoaded', function() {
   // Nettoyer anciens flags
-  localStorage.removeItem('chatmcv_ai_seen');
-  localStorage.removeItem('chatmcv_gpu');
+  try {
+    localStorage.removeItem('chatmcv_ai_seen');
+    localStorage.removeItem('chatmcv_gpu');
+  } catch(e) {}
 
-  if (localStorage.getItem('chatmcv_seen')) {
+  var seen = false;
+  try { seen = !!localStorage.getItem('chatmcv_seen'); } catch(e) {}
+
+  if (seen) {
     var ov = document.getElementById('wcv-overlay');
-    if (ov) ov.classList.add('hidden');
+    if (ov) { ov.classList.add('hidden'); ov.style.display = 'none'; }
   } else {
     wcvSetState('offer');
   }
