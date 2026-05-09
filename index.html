@@ -856,14 +856,35 @@
 
     <!-- État : proposition IA -->
     <div id="wcv-ai-offer">
-      <ul class="wcv-features">
-        <li><span class="ic">🧠</span> IA Qwen2.5 — répond à toutes vos questions</li>
-        <li><span class="ic">🔒</span> 100 % privé — tourne dans votre navigateur</li>
-        <li><span class="ic">📶</span> Wi-Fi requis pour le téléchargement initial</li>
-        <li><span class="ic">💾</span> Mis en cache — hors-ligne les fois suivantes</li>
-      </ul>
+      <p style="font-size:0.82rem;color:var(--text-muted);margin:0 0 10px;line-height:1.5;">
+        Choisissez un modèle IA pour des réponses libres et intelligentes.<br>
+        <strong>Wi-Fi requis</strong> pour le 1er téléchargement, puis hors-ligne.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;background:rgba(26,111,244,0.08);border:1px solid rgba(26,111,244,0.25);border-radius:9px;padding:10px 12px;transition:border-color 0.2s;" id="model-opt-0">
+          <input type="radio" name="wcv-model" value="0" checked style="margin-top:3px;accent-color:var(--blue-primary);">
+          <span>
+            <strong style="color:var(--text-main);">Qwen2.5 0.5B</strong>
+            <span style="font-size:0.75rem;color:var(--text-muted);display:block;">Ultra-léger (~200 Mo) • Rapide • Recommandé pour débuter</span>
+          </span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;background:rgba(26,111,244,0.04);border:1px solid var(--border);border-radius:9px;padding:10px 12px;transition:border-color 0.2s;" id="model-opt-1">
+          <input type="radio" name="wcv-model" value="1" style="margin-top:3px;accent-color:var(--blue-primary);">
+          <span>
+            <strong style="color:var(--text-main);">Qwen2.5 1.5B</strong>
+            <span style="font-size:0.75rem;color:var(--text-muted);display:block;">Équilibré (~600 Mo) • Meilleure qualité</span>
+          </span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;background:rgba(26,111,244,0.04);border:1px solid var(--border);border-radius:9px;padding:10px 12px;transition:border-color 0.2s;" id="model-opt-2">
+          <input type="radio" name="wcv-model" value="2" style="margin-top:3px;accent-color:var(--blue-primary);">
+          <span>
+            <strong style="color:var(--text-main);">Qwen2.5 3B</strong>
+            <span style="font-size:0.75rem;color:var(--text-muted);display:block;">Puissant (~1,8 Go) • Meilleure intelligence ⚡</span>
+          </span>
+        </label>
+      </div>
       <button class="wcv-btn" onclick="wcvDownloadAI()" style="margin-bottom:10px;">
-        ⬇️ Télécharger l'IA (~200 Mo)
+        ⬇️ Télécharger le modèle sélectionné
       </button>
       <button class="wcv-btn-skip" onclick="wcvStart()">
         Continuer sans IA — base de connaissances intégrée
@@ -884,7 +905,8 @@
     <!-- État : IA prête -->
     <div id="wcv-ai-ready" style="display:none;">
       <div style="text-align:center;font-size:2rem;margin-bottom:10px;">✅</div>
-      <p style="text-align:center;font-size:0.9rem;color:var(--text-main);font-weight:700;margin-bottom:14px;">IA activée et prête !</p>
+      <p style="text-align:center;font-size:0.9rem;color:var(--text-main);font-weight:700;margin-bottom:6px;">IA activée et prête !</p>
+      <p id="wcv-model-name" style="text-align:center;font-size:0.8rem;color:var(--text-muted);margin-bottom:14px;"></p>
       <button class="wcv-btn" onclick="wcvStart()">C'est parti ! 🚀</button>
     </div>
 
@@ -959,8 +981,8 @@
       <p style="font-size:0.75rem;color:var(--text-dim);margin-top:6px;">Patientez, le modèle se met en cache pour les prochaines fois.</p>
     </div>
     <div id="ai-panel-ready" style="display:none;">
-      <div style="display:flex;align-items:center;gap:8px;color:#22c55e;font-weight:700;font-size:0.9rem;margin-bottom:8px;">
-        <span>✅</span> IA activée — Qwen2.5 prêt
+      <div id="ai-ready-label" style="display:flex;align-items:center;gap:8px;color:#22c55e;font-weight:700;font-size:0.9rem;margin-bottom:8px;">
+        ✅ IA activée — Qwen2.5 prêt
       </div>
       <p style="font-size:0.8rem;color:var(--text-muted);margin:0;line-height:1.5;">
         Les réponses utilisent maintenant le modèle IA.<br>
@@ -2478,13 +2500,37 @@ function handleGeneral(text, norm, history) {
 }
 
 // ══════════════════════════════════════════════════════
-// 🧠 MOTEUR IA — Transformers.js (Qwen2.5-0.5B-Instruct)
+// 🧠 MOTEUR IA — Transformers.js (Qwen2.5)
 // ══════════════════════════════════════════════════════
 let aiReady = false;
 let aiPipe  = null;
 let aiPanelOpen = false;
 
-const AI_MODEL  = 'onnx-community/Qwen2.5-0.5B-Instruct';
+const AI_MODELS = [
+  {
+    id: 'onnx-community/Qwen2.5-0.5B-Instruct',
+    label: 'Qwen2.5 0.5B',
+    size: '~200 Mo'
+  },
+  {
+    id: 'onnx-community/Qwen2.5-1.5B-Instruct',
+    label: 'Qwen2.5 1.5B',
+    size: '~600 Mo'
+  },
+  {
+    id: 'onnx-community/Qwen2.5-3B-Instruct',
+    label: 'Qwen2.5 3B',
+    size: '~1,8 Go'
+  }
+];
+
+function getSelectedModelIndex() {
+  const radios = document.querySelectorAll('input[name="wcv-model"]');
+  for (const r of radios) { if (r.checked) return parseInt(r.value); }
+  return 0;
+}
+
+const AI_MODEL  = AI_MODELS[0].id; // valeur par défaut (remplacée dynamiquement)
 const AI_SYSTEM = `Tu es Chat MCV, un assistant pédagogique spécialisé en Commerce et Vente (BTS MCO / CAP). Tu réponds toujours en français, de façon claire et structurée. Tu aides les étudiants à réviser leurs cours : veille commerciale, zone de chalandise, méthodes de vente, SONCAS, CAP, objections, MCV, seuil de rentabilité, merchandising, prospection, fidélisation, e-commerce. Sois pédagogue, donne des exemples concrets, utilise des tableaux ou listes quand c'est utile.`;
 
 function setAiDot(state) { // 'loading' | 'ready' | 'error' | ''
@@ -2500,8 +2546,18 @@ function setAiPanel(state) { // 'idle'|'loading'|'ready'|'error'
 }
 
 async function aiStartLoad() {
+  // Lire le modèle sélectionné dans le panel IA (radio buttons s'ils existent, sinon 0)
+  const panelRadios = document.querySelectorAll('input[name="ai-panel-model"]');
+  let idx = 0;
+  for (const r of panelRadios) { if (r.checked) { idx = parseInt(r.value); break; } }
+  const model = AI_MODELS[idx];
+
   setAiPanel('loading');
   setAiDot('loading');
+  // Mettre à jour le label de chargement
+  const lbl = document.getElementById('ai-load-text');
+  if (lbl) lbl.textContent = `⏳ Chargement de ${model.label} (${model.size})…`;
+
   try {
     // Transformers.js v3 — depuis jsDelivr
     const { pipeline, env } = await import(
@@ -2510,7 +2566,7 @@ async function aiStartLoad() {
     env.allowLocalModels = false;
     env.useBrowserCache = true;
 
-    aiPipe = await pipeline('text-generation', AI_MODEL, {
+    aiPipe = await pipeline('text-generation', model.id, {
       dtype: 'q4',
       progress_callback: function(p) {
         const pct = p.progress ? Math.round(p.progress) : 0;
@@ -2523,7 +2579,15 @@ async function aiStartLoad() {
     });
 
     aiReady = true;
-    setAiPanel('ready');
+    // Mettre à jour le label "prêt" avec le nom du modèle
+    const readyLabel = document.getElementById('ai-ready-label');
+    if (readyLabel) readyLabel.textContent = `✅ IA activée — ${model.label} prêt`;
+    ['idle','loading','error'].forEach(function(s) {
+      var el = document.getElementById('ai-panel-' + s);
+      if (el) el.style.display = 'none';
+    });
+    var readyEl = document.getElementById('ai-panel-ready');
+    if (readyEl) readyEl.style.display = '';
     setAiDot('ready');
   } catch(e) {
     setAiPanel('error');
@@ -2564,6 +2628,12 @@ function toggleAIPanel() {
   aiPanelOpen = !aiPanelOpen;
   document.getElementById('ai-panel').classList.toggle('open', aiPanelOpen);
   document.getElementById('ai-panel-overlay').classList.toggle('open', aiPanelOpen);
+  // Resynchronise l'état du panel à chaque ouverture
+  if (aiPanelOpen) {
+    if (aiReady) {
+      setAiPanel('ready');
+    }
+  }
 }
 
 // ── Modale de bienvenue ──
@@ -2575,7 +2645,13 @@ function wcvSetState(state) { // offer | loading | ready | error
 }
 
 async function wcvDownloadAI() {
+  const idx = getSelectedModelIndex();
+  const model = AI_MODELS[idx];
+
   wcvSetState('loading');
+  const lbl = document.getElementById('wcv-load-text');
+  if (lbl) lbl.textContent = `Connexion à Hugging Face — ${model.label} (${model.size})…`;
+
   try {
     const { pipeline, env } = await import(
       'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3/dist/transformers.min.js'
@@ -2583,7 +2659,7 @@ async function wcvDownloadAI() {
     env.allowLocalModels = false;
     env.useBrowserCache = true;
 
-    aiPipe = await pipeline('text-generation', AI_MODEL, {
+    aiPipe = await pipeline('text-generation', model.id, {
       dtype: 'q4',
       progress_callback: function(p) {
         const pct = p.progress ? Math.round(p.progress) : 0;
@@ -2602,8 +2678,20 @@ async function wcvDownloadAI() {
 
     aiReady = true;
     setAiDot('ready');
-    setAiPanel('ready');
+    // Mettre à jour le label "prêt" dans le panel avec le nom du modèle
+    const readyLabel = document.getElementById('ai-ready-label');
+    if (readyLabel) readyLabel.textContent = `✅ IA activée — ${model.label} prêt`;
+    // Forcer l'état ready sur le panel IA (même s'il est fermé)
+    ['idle','loading','error'].forEach(function(s) {
+      var el = document.getElementById('ai-panel-' + s);
+      if (el) el.style.display = 'none';
+    });
+    var readyEl = document.getElementById('ai-panel-ready');
+    if (readyEl) readyEl.style.display = '';
     wcvSetState('ready');
+    // Mettre à jour le texte de confirmation dans la modale
+    var wcvModelName = document.getElementById('wcv-model-name');
+    if (wcvModelName) wcvModelName.textContent = model.label + ' (' + model.size + ')';
   } catch(e) {
     wcvSetState('error');
     var errEl = document.getElementById('wcv-error-msg');
@@ -2632,6 +2720,29 @@ document.addEventListener('DOMContentLoaded', function() {
   } else {
     wcvSetState('offer');
   }
+
+  // Highlight de la carte sélectionnée dans la modale de bienvenue
+  var modelRadios = document.querySelectorAll('input[name="wcv-model"]');
+  modelRadios.forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      for (var i = 0; i < AI_MODELS.length; i++) {
+        var card = document.getElementById('model-opt-' + i);
+        if (!card) continue;
+        if (i === parseInt(radio.value)) {
+          card.style.background = 'rgba(26,111,244,0.12)';
+          card.style.borderColor = 'rgba(26,111,244,0.5)';
+        } else {
+          card.style.background = 'rgba(26,111,244,0.04)';
+          card.style.borderColor = 'var(--border)';
+        }
+      }
+    });
+  });
+
+  // Si l'IA était déjà chargée dans cette session (rechargement de page),
+  // le modèle reste en cache navigateur mais aiReady est réinitialisé à false.
+  // On affiche donc toujours idle au démarrage — c'est normal.
+  // Le panel se synchronisera à l'ouverture via toggleAIPanel().
 });
 
 </script>
