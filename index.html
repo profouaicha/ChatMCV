@@ -900,6 +900,9 @@
       <p style="font-size:0.75rem;color:var(--text-dim);text-align:center;line-height:1.5;">
         Le modèle sera mis en cache — les prochaines fois il chargera en quelques secondes.
       </p>
+      <button class="wcv-btn-skip" onclick="wcvStart()" style="margin-top:10px;">
+        Continuer sans attendre (base intégrée)
+      </button>
     </div>
 
     <!-- État : IA prête -->
@@ -912,9 +915,9 @@
 
     <!-- État : erreur -->
     <div id="wcv-ai-error" style="display:none;">
-      <p id="wcv-error-msg" style="font-size:0.82rem;color:#ef4444;text-align:center;margin-bottom:12px;"></p>
+      <p id="wcv-error-msg" style="font-size:0.82rem;color:#ef4444;text-align:center;margin-bottom:12px;line-height:1.6;"></p>
       <button class="wcv-btn" onclick="wcvDownloadAI()" style="margin-bottom:8px;">🔄 Réessayer</button>
-      <button class="wcv-btn-skip" onclick="wcvStart()">Continuer sans IA</button>
+      <button class="wcv-btn-skip" onclick="wcvStart()">✅ Continuer sans IA — base intégrée</button>
     </div>
 
   </div>
@@ -2659,9 +2662,11 @@ async function wcvDownloadAI() {
     env.allowLocalModels = false;
     env.useBrowserCache = true;
 
+    let loadingDone = false;
     aiPipe = await pipeline('text-generation', model.id, {
       dtype: 'q4',
       progress_callback: function(p) {
+        if (loadingDone) return; // Ne pas écraser l'état "prêt"
         const pct = p.progress ? Math.round(p.progress) : 0;
         const txt = p.file ? ('⬇️ ' + p.file.split('/').pop() + ' — ' + pct + '%') : ('⏳ Initialisation…');
         const bar = document.getElementById('wcv-load-bar');
@@ -2676,6 +2681,7 @@ async function wcvDownloadAI() {
       }
     });
 
+    loadingDone = true;
     aiReady = true;
     setAiDot('ready');
     // Mettre à jour le label "prêt" dans le panel avec le nom du modèle
@@ -2688,15 +2694,33 @@ async function wcvDownloadAI() {
     });
     var readyEl = document.getElementById('ai-panel-ready');
     if (readyEl) readyEl.style.display = '';
-    wcvSetState('ready');
     // Mettre à jour le texte de confirmation dans la modale
     var wcvModelName = document.getElementById('wcv-model-name');
     if (wcvModelName) wcvModelName.textContent = model.label + ' (' + model.size + ')';
+    // Passer à l'état "prêt" et fermer automatiquement après 2,5 secondes
+    wcvSetState('ready');
+    setTimeout(function() {
+      var ov = document.getElementById('wcv-overlay');
+      if (ov && !ov.classList.contains('hidden')) {
+        wcvStart();
+      }
+    }, 2500);
   } catch(e) {
     wcvSetState('error');
-    var errEl = document.getElementById('wcv-error-msg');
-    if (errEl) errEl.textContent = '❌ ' + e.message;
     setAiDot('error');
+    var errEl = document.getElementById('wcv-error-msg');
+    var msg = e.message || '';
+    if (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network') || msg.toLowerCase().includes('load')) {
+      if (errEl) errEl.innerHTML =
+        '❌ Impossible de télécharger le modèle.<br><br>' +
+        '<strong>Ce fichier doit être servi via un serveur web</strong> (pas ouvert directement depuis votre bureau).<br><br>' +
+        '💡 Solutions :<br>' +
+        '• Uploadez ce fichier sur un hébergeur (GitHub Pages, Netlify…)<br>' +
+        '• Ou utilisez un serveur local : <code style="background:rgba(0,0,0,0.15);padding:2px 6px;border-radius:4px;">npx serve .</code><br>' +
+        '• Ou cliquez sur <em>"Continuer sans IA"</em> ci-dessous.';
+    } else {
+      if (errEl) errEl.textContent = '❌ ' + msg;
+    }
   }
 }
 
